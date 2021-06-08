@@ -21,7 +21,7 @@
     PS C:\> & 'C:\TMP\RunTaskAsUserName.ps1' -UserName 'mschoenburg' -PathToFile 'C:\TMP\screenshot.lnk'
     This would be executed on the local machine.
 .EXAMPLE
-    PS C:\> & 'C:\TMP\RunTaskAsUserName.ps1' -UserName 'mschoenburg' -PathToFile 'C:\Program Files (x86)\Microsoft Office\root\Office16\OUTLOOK.EXE' -Arguments '/resetsharedfolders'
+    PS C:\> & 'C:\TMP\RunTaskAsUserName.ps1' -UserName 'mschoenburg' -PathToFile 'C:\Program Files (x86)\Microsoft Office\root\Office16\OUTLOOK.EXE' -Arguments '/resetfoldernames'
     This would be executed on the local machine.
 .NOTES
     Author: Michael Schönburg
@@ -35,7 +35,7 @@ param (
         Mandatory = $true,
         Position = 0
     )]
-    [ParameterType]
+    [string]
     $UserName,
 
     # The File that is to be executed.
@@ -48,7 +48,7 @@ param (
 
     # The Arguments that should be passed along to the File.
     [Parameter(
-        Mandatory = $true,
+        Mandatory = $false,
         Position = 2
     )]
     [string]
@@ -62,30 +62,45 @@ param (
     $Computer = ($env:computername)
 )
 
-$ScriptTask =
-{
- 
+$ScriptBlock = {
     param (
-        [string]$userName,
-        [string]$pathToFile,
-        [string]$arguments
-     )
- 
+        # The UserName in whose context the File should be executed.
+        [Parameter(
+            Mandatory = $true,
+            Position = 0
+        )]
+        [string]
+        $userName,
+
+        # The File that is to be executed.
+        [Parameter(
+            Mandatory = $true,
+            Position = 1
+        )]
+        [string]
+        $pathToFile,
+
+        # The Arguments that should be passed along to the File.
+        [Parameter(
+            Mandatory = $false,
+            Position = 2
+        )]
+        [string]
+        $arguments
+    )
+
     #Action
-    if ($arguments.Length -gt 0) {
-        $action = New-ScheduledTaskAction –Execute $PathToFile -Argument $arguments
-    } else {
-        $action = New-ScheduledTaskAction –Execute $PathToFile
-    }
+    $action = New-ScheduledTaskAction –Execute $PathToFile
+    if ($arguments.Length -gt 0) {$action = New-ScheduledTaskAction –Execute $PathToFile -Argument $arguments}
  
     # Principal
-    $p = New-ScheduledTaskPrincipal -UserNameId $UserName -LogonType Interactive -ErrorAction Ignore
+    $p = New-ScheduledTaskPrincipal -UserId $UserName -LogonType Interactive -ErrorAction Ignore
  
     # Settings
     $s = New-ScheduledTaskSettingsSet -MultipleInstances Parallel -Hidden
  
     # Create the task.
-    task = New-ScheduledTask -Action $Action -Settings $S -Principal $P
+    $task = New-ScheduledTask -Action $action -Settings $S -Principal $P
  
     # Unregister the old task if there is one that hasn't been cleaned up.
     Unregister-ScheduledTask -TaskName 'TEMPTASK' -ErrorAction Ignore -Confirm:$false
@@ -100,4 +115,4 @@ $ScriptTask =
     Unregister-ScheduledTask -TaskName 'TEMPTASK' -ErrorAction Ignore -Confirm:$false
 }
  
-Invoke-PathToFile -ComputerName $Computer -ScriptBlock $ScriptTask -ArgumentList $UserName, $PathToFile, $Arguments
+Invoke-Command -ComputerName $Computer -ScriptBlock $ScriptBlock -ArgumentList $UserName, $PathToFile, $Arguments

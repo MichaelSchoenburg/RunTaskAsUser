@@ -1,4 +1,6 @@
+`Get-Help .\RunTaskAsUser.ps1 -Full`
 
+```
 NAME
     RunTaskAsUser.ps1
     
@@ -102,3 +104,4 @@ NOTES
     
     
     
+```

@@ -12,17 +12,19 @@
 .PARAMETER Computer
     The computer/server this should happen on.
     Defaults to localhost.
+.INPUTS
+    See parameters.
 .OUTPUTS
     None.
 .EXAMPLE
     PS C:\> & 'C:\TMP\RunTaskAsUserName.ps1' -UserName 'mschoenburg' -PathToFile 'C:\TMP\screenshot.lnk' -Computer 'My-RDS-01'
     This runs the link screenshot.lnk in the context of the UserName mschoenburg on the terminal server My-RDS-01.
 .EXAMPLE
-    PS C:\> & 'C:\TMP\RunTaskAsUserName.ps1' -UserName 'mschoenburg' -PathToFile 'C:\TMP\screenshot.lnk'
+    PS C:\> & 'C:\TMP\RunTaskAsUserName.ps1' -UserName 'mschoenburg' -PathToFile 'C:\TMP\MyProgram.exe'
     This would be executed on the local machine.
 .EXAMPLE
-    PS C:\> & 'C:\TMP\RunTaskAsUserName.ps1' -UserName 'mschoenburg' -PathToFile 'C:\Program Files (x86)\Microsoft Office\root\Office16\OUTLOOK.EXE' -Arguments '/resetfoldernames'
-    This would be executed on the local machine.
+    PS C:\> & 'C:\TMP\RunTaskAsUserName.ps1' -UserName 'mschoenburg' -PathToFile 'C:\Program Files (x86)\Microsoft Office\root\Office16\OUTLOOK.EXE' -Arguments '/safe'
+    This would start outlook in safe mode.
 .NOTES
     Author: Michael Schönburg
     Current version: 0.1
@@ -91,8 +93,10 @@ $ScriptBlock = {
 
     #Action
     $action = New-ScheduledTaskAction –Execute $PathToFile
-    if ($arguments.Length -gt 0) {$action = New-ScheduledTaskAction –Execute $PathToFile -Argument $arguments}
- 
+    if ($arguments.Length -gt 0) {
+        $action = New-ScheduledTaskAction –Execute $PathToFile -Argument $arguments
+    }
+
     # Principal
     $p = New-ScheduledTaskPrincipal -UserId $UserName -LogonType Interactive -ErrorAction Ignore
  
@@ -106,10 +110,11 @@ $ScriptBlock = {
     Unregister-ScheduledTask -TaskName 'TEMPTASK' -ErrorAction Ignore -Confirm:$false
  
     # Register the task.
-    Register-ScheduledTask -InputObject $task -TaskPath '\KD\' -TaskName 'TEMPTASK'
- 
+    # Suppressing output via assignment to $null
+    $null = Register-ScheduledTask -InputObject $task -TaskPath '\KD\' -TaskName 'TEMPTASK'
+    
     # Execute the task.
-    Get-ScheduledTask -TaskName 'TEMPTASK' -TaskPath '\KD\' | Start-ScheduledTask
+    Get-ScheduledTask -TaskName 'TEMPTASK' -TaskPath '\KD\' | Start-ScheduledTask | Out-Null
  
     # Unregister the task.
     Unregister-ScheduledTask -TaskName 'TEMPTASK' -ErrorAction Ignore -Confirm:$false
